@@ -1,6 +1,7 @@
 use rand::prelude::*;
 use crate::game::snake::Direction;
 use std::collections::LinkedList;
+use graphics::ellipse;
 
 #[derive(Clone)]
 pub struct Brain {
@@ -118,5 +119,95 @@ impl Brain {
         for r in &mut self.weight_ih { r.iter_mut().for_each(&mut m) }
         for r in &mut self.weight_hh { r.iter_mut().for_each(&mut m) }
         for r in &mut self.weight_ho { r.iter_mut().for_each(&mut m) }
+    }
+
+    pub fn render_vis(
+        &self,
+        gl: &mut opengl_graphics::GlGraphics,
+        args: &piston::input::RenderArgs,
+        inputs: &[f32],
+        offset_x: f64, // Добавлен четвертый аргумент
+    ) {
+        use graphics::*;
+
+        let start_x = offset_x + 50.0; // Используем offset_x для смещения
+        let start_y = 40.0;
+        let layer_gap = 150.0;
+        let node_gap = 11.0;
+
+        // 1. Считаем активации
+        let h1 = self.calculate_layer(inputs, &self.weight_ih);
+        let h2 = self.calculate_layer(&h1, &self.weight_hh);
+        let out = self.calculate_layer(&h2, &self.weight_ho);
+        let acts = [inputs.to_vec(), h1, h2, out];
+
+        // 2. Координаты узлов
+        let layers = [12, 32, 16, 4];
+        let mut positions = Vec::new();
+        for (l_idx, &size) in layers.iter().enumerate() {
+            let mut layer_pos = Vec::new();
+            for i in 0..size {
+                layer_pos.push([
+                    start_x + l_idx as f64 * layer_gap,
+                    start_y + i as f64 * node_gap
+                ]);
+            }
+            positions.push(layer_pos);
+        }
+
+        gl.draw(args.viewport(), |c, gl| {
+            // 3. Рисуем связи
+            self.draw_layer_links(gl, &c, &positions[0], &positions[1], &self.weight_ih);
+            self.draw_layer_links(gl, &c, &positions[1], &positions[2], &self.weight_hh);
+            self.draw_layer_links(gl, &c, &positions[2], &positions[3], &self.weight_ho);
+
+            // 4. Рисуем нейроны
+            for (l, layer) in positions.iter().enumerate() {
+                for (n, pos) in layer.iter().enumerate() {
+                    let a = acts[l][n];
+                    let intensity = 0.3 + (a.abs() * 0.7) as f32;
+                    let color = if a > 0.0 { [0.0, intensity, 0.5, 1.0] } else { [intensity, 0.0, 0.2, 1.0] };
+                    ellipse(color, ellipse::circle(pos[0], pos[1], 4.0), c.transform, gl);
+                }
+            }
+        });
+    }
+
+    fn calculate_layer(&self, inputs: &[f32], weights: &Vec<Vec<f32>>) -> Vec<f32> {
+        let mut output = vec![0.0; weights.len()];
+        for i in 0..weights.len() {
+            for j in 0..inputs.len() {
+                output[i] += inputs[j] * weights[i][j];
+            }
+            output[i] = output[i].tanh();
+        }
+        output
+    }
+
+    fn draw_layer_links(
+        &self,
+        gl:&mut opengl_graphics::GlGraphics,
+        c:&graphics::Context,
+        p1: &[[f64;2]],
+        p2: &[[f64;2]],
+        weights:&Vec<Vec<f32>>
+    ){
+        use graphics::*;
+        for (j, end) in p2.iter().enumerate(){
+            for (i, start) in p1.iter().enumerate(){
+                let w = weights[j][i];
+                if w.abs()<0.1{
+                    continue
+                }
+                let alpha = (w.abs()*0.2) as f32;
+                let color = if w>0.0{
+                    [0.2, 0.2, 1.0, alpha]
+                }else{
+                    [1.0, 0.2, 0.2, alpha]
+                };
+
+                line(color, 0.5, [start[0], start[1], end[0], end[1]], c.transform, gl)
+            }
+        }
     }
 }

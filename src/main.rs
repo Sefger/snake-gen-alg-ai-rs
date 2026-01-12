@@ -35,7 +35,7 @@ fn main() {
 
     let mut window: GlutinWindow = WindowSettings::new(
         "Snake AI Training",
-        [400, 400],
+        [1200, 400],
     )
         .graphics_api(opengl)
         .exit_on_esc(true)
@@ -44,15 +44,22 @@ fn main() {
         .unwrap();
 
     gl::load_with(|symbol| window.get_proc_address(symbol) as *const _);
-    let mut evolution = Evolution::new(200);
+    let mut evolution = Evolution::new(350);
     let mut current_agent_idx = 0;
     let mut scores = Vec::new();
     let mut game = create_game(opengl, evolution.current_generation[0].clone());
 
-    let mut events = Events::new(EventSettings::new()).ups(150);
+    let mut best_brain_of_prev_gen:Option<Brain> = None;
+
+    let mut events = Events::new(EventSettings::new()).ups(200);
     while let Some(e) = events.next(&mut window) {
         if let Some(r) = e.render_args() {
             game.render(&r);
+            if let Some(ref best_brain) = best_brain_of_prev_gen {
+                let head = *game.snake.body.front().unwrap();
+                let inputs = Brain::get_inputs(head, (game.apple.pos_x, game.apple.pos_y), &game.snake.body, 20);
+                best_brain.render_vis(&mut game.gl, &r, &inputs, 400.0);
+            }
         }
         if let Some(_) = e.update_args() {
             if !game.is_game_over {
@@ -67,10 +74,15 @@ fn main() {
                     game = create_game(opengl, evolution.current_generation[current_agent_idx].clone());
                 }
                 else{
-                    let best_fitness = scores.iter(). map(|s| s.1).fold(f32::MIN,|a, b|a.max(b));
-                    let worst_fitness = scores.iter().map(|s| s.1).fold(f32::MAX, |a,b|a.min(b));
+                    if let Some((best_idx, _)) = scores.iter().max_by(|a, b| a.1.partial_cmp(&b.1).unwrap()) {
+                        // Сохраняем мозг именно этого чемпиона
+                        best_brain_of_prev_gen = Some(evolution.current_generation[*best_idx].clone());
+                    }
+
+                    let best_fitness = scores.iter().map(|s| s.1).fold(f32::MIN, |a, b| a.max(b));
+                    let worst_fitness = scores.iter().map(|s| s.1).fold(f32::MAX, |a, b| a.min(b));
                     println!("Поколение {}. Лучший: {:.2}\nХудший: {:.2}",
-                             evolution.generation_number, best_fitness,worst_fitness);
+                             evolution.generation_number, best_fitness, worst_fitness);
                     evolution.breed(scores.clone());
 
                     scores.clear();
