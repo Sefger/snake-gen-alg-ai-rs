@@ -1,0 +1,122 @@
+use rand::prelude::*;
+use crate::game::snake::Direction;
+use std::collections::LinkedList;
+
+#[derive(Clone)]
+pub struct Brain {
+    // Матрица весов: ih(input-hidden), ho (hidden-output)
+    // hh - h1-h2 промежуточный слой
+    weight_ih: Vec<Vec<f32>>,
+    weight_hh: Vec<Vec<f32>>,
+    weight_ho: Vec<Vec<f32>>,
+}
+
+impl Brain {
+    /// Создание мозга со случайными весами
+    pub fn new(inputs: usize, hidden1: usize,hidden2:usize,  outputs: usize) -> Self {
+        let mut rng = rand::rng();
+
+        let weight_ih = (0..hidden1)
+            .map(|_| (0..inputs).map(|_| rng.random_range(-1.0..1.0)).collect())
+            .collect();
+        let weight_hh = (0..hidden2)
+            .map(|_| (0..hidden1).map(|_| rng.random_range(-1.0..1.0)).collect())
+            .collect();
+        let weight_ho = (0..outputs)
+            .map(|_| (0..hidden2).map(|_| rng.random_range(-1.0..1.0)).collect())
+            .collect();
+        Brain { weight_ih, weight_hh,weight_ho }
+    }
+
+    /// Прогон данных через нейросеть
+    pub fn forward(&self, inputs: &Vec<f32>) -> Vec<f32> {
+        // Высисляем скрытый слой
+        // Hidden = tanh(Weights_ih * Inputs)
+        let mut h1 = vec![0.0; self.weight_ih.len()];
+
+        for i in 0..self.weight_ih.len() {
+            for j in 0..inputs.len() {
+                h1[i] += inputs[j] * self.weight_ih[i][j];
+            }
+            h1[i] = h1[i].tanh();
+        }
+
+        let mut h2 = vec![0.0; self.weight_hh.len()];
+        for i in 0..self.weight_hh.len() {
+            for j in 0..inputs.len() {
+                h2[i] += h1[j] * self.weight_hh[i][j];
+            }
+            h2[i] = h2[i].tanh();
+        }
+
+        // Вычисляем выходной слой: Output = Weights_ho * Hidden
+        let mut outputs = vec![0.0; self.weight_ho.len()];
+        for i in 0..self.weight_ho.len() {
+            for j in 0..h2.len() {
+                outputs[i] += h2[j] * self.weight_ho[i][j];
+            }
+        }
+        outputs
+    }
+
+    /// Сбор данных из мира ("зрение")
+    pub fn get_inputs(
+        head: (i32, i32),
+        apple: (i32, i32),
+        body:&LinkedList<(i32, i32)>,
+        grid_size: i32,
+    ) -> Vec<f32> {
+        let mut inputs = vec![0.0; 12];
+        let max_coord = (grid_size - 1) as f32;
+        // Расстояние до стен (нормализованные от 0 до 1)
+
+        inputs[0] = head.1 as f32 / max_coord; // До верха
+        inputs[1] = (max_coord - head.1 as f32) / max_coord; // До низа
+        inputs[2] = head.0 as f32 / max_coord; //До левого края
+        inputs[3] = (max_coord - head.0 as f32) / max_coord; // До нижнего края
+
+        // Относительное положение яблока
+        // ИИ должен понимать куда ему ползти
+        inputs[4] = if apple.1 < head.1 { 1.0 } else { 0.0 };
+        inputs[5] = 1.0 - inputs[4];
+        inputs[6] = if apple.0 < head.0 { 1.0 } else { 0.0 };
+        inputs[7] = 1.0 - inputs[6];
+        inputs[8] = if Self::is_unsafe((head.0, head.1 - 1), body, grid_size) { 1.0 } else { 0.0 };
+        inputs[9] = if Self::is_unsafe((head.0, head.1 + 1), body, grid_size) { 1.0 } else { 0.0 };
+        inputs[10] = if Self::is_unsafe((head.0 - 1, head.1), body, grid_size) { 1.0 } else { 0.0 };
+        inputs[11] = if Self::is_unsafe((head.0 + 1, head.1), body, grid_size) { 1.0 } else { 0.0 };
+        inputs
+    }
+    fn is_unsafe(pos:(i32, i32), body:&LinkedList<(i32, i32)>, grid_size:i32)->bool{
+        if pos.0<0|| pos.0>=grid_size||pos.1<0||pos.1>=grid_size{
+            return true;
+        }
+        body.iter().any(|&p| p == pos)
+    }
+
+    pub fn decide(&self, inputs: &Vec<f32>) -> Direction {
+        let out = self.forward(inputs);
+        let max_idx = out.iter().enumerate().max_by(
+            |a, b| a.1.partial_cmp(b.1).unwrap()
+        ).unwrap().0;
+
+        match max_idx {
+            0 => Direction::Up,
+            1 => Direction::Down,
+            2 => Direction::Left,
+            _ => Direction::Right
+        }
+    }
+    pub fn mutate(&mut self, rate: f32) {
+        let mut rng = rand::rng();
+        let mut m = |v: &mut f32| if rng.random_bool(rate as f64) {
+            if rng.random_bool(0.1){
+                *v = rng.random_range(-1.0..1.0);
+            }
+            *v += rng.random_range(-0.2..0.2);
+        };
+        for r in &mut self.weight_ih { r.iter_mut().for_each(&mut m) }
+        for r in &mut self.weight_hh { r.iter_mut().for_each(&mut m) }
+        for r in &mut self.weight_ho { r.iter_mut().for_each(&mut m) }
+    }
+}
