@@ -108,8 +108,10 @@ fn main() {
 
                     let best_fitness = scores.iter().map(|s| s.1).fold(f32::MIN, |a, b| a.max(b));
                     let worst_fitness = scores.iter().map(|s| s.1).fold(f32::MAX, |a, b| a.min(b));
-                    println!("Поколение {}. Лучший: {:.2}\nХудший: {:.2}",
-                             evolution.generation_number, best_fitness, worst_fitness);
+                    let avg_fitness = scores.iter().map(|s|s.1).sum::<f32>()/scores.len() as f32;
+
+                    println!("Поколение {}. Лучший: {:.2}\nХудший: {:.2}\nСредний результат:{:.2}",
+                             evolution.generation_number, best_fitness, worst_fitness, avg_fitness);
                     evolution.breed(scores.clone());
 
                     scores.clear();
