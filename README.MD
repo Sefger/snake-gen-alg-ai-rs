@@ -62,10 +62,10 @@
 ### Команды
 ```bash
 # Клонировать репозиторий
-git clone [https://github.com/your-username/snake-ai-rust](https://github.com/your-username/snake-ai-rust)
+git clone https://github.com/Sefger/snake-gen-alg-ai-rs.git
 
 # Перейти в папку проекта
-cd snake-ai-rust
+cd snake-gen-alg-ai-rs
 
 # Запустить обучение (в режиме release для скорости)
 cargo run --release
