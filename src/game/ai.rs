@@ -1,8 +1,10 @@
 use rand::prelude::*;
-use crate::game::snake::Direction;
 use std::collections::LinkedList;
+use opengl_graphics::GlGraphics;
+use piston::input::RenderArgs;
 
-use crate::config::GRID_SIZE;
+use crate::config::*;
+use crate::game::snake::Direction;
 
 #[derive(Clone)]
 pub struct Brain {
@@ -123,17 +125,21 @@ impl Brain {
 
     pub fn render_vis(
         &self,
-        gl: &mut opengl_graphics::GlGraphics,
-        args: &piston::input::RenderArgs,
+        gl: &mut GlGraphics,
+        args: &RenderArgs,
         inputs: &[f32],
         offset_x: f64, // Добавлен четвертый аргумент
     ) {
+
         use graphics::*;
 
         let start_x = offset_x + 50.0; // Используем offset_x для смещения
-        let start_y = 40.0;
+
         let layer_gap = 150.0;
-        let node_gap = 11.0;
+        let node_gap = 12.0;
+        let layers = [INPUTS, H1,H2, OUTPUT];
+        let max_layer_height = layers.iter().max().unwrap_or(&0);
+        let total_max_height = (*max_layer_height as f64)*node_gap;
 
         // 1. Считаем активации
         let h1 = self.calculate_layer(inputs, &self.weight_ih);
@@ -142,14 +148,15 @@ impl Brain {
         let acts = [inputs.to_vec(), h1, h2, out];
 
         // 2. Координаты узлов
-        let layers = [12, 32, 16, 4];
         let mut positions = Vec::new();
         for (l_idx, &size) in layers.iter().enumerate() {
             let mut layer_pos = Vec::new();
+            let layer_height = (size as f64)*node_gap;
+            let v_offset = (total_max_height - layer_height)/2.0+10.0;
             for i in 0..size {
                 layer_pos.push([
                     start_x + l_idx as f64 * layer_gap,
-                    start_y + i as f64 * node_gap
+                    v_offset + i as f64 * node_gap
                 ]);
             }
             positions.push(layer_pos);
