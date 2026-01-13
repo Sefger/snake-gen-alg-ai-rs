@@ -1,7 +1,8 @@
 use rand::prelude::*;
 use crate::game::snake::Direction;
 use std::collections::LinkedList;
-use graphics::ellipse;
+
+use crate::config::GRID_SIZE;
 
 #[derive(Clone)]
 pub struct Brain {
@@ -65,10 +66,9 @@ impl Brain {
         head: (i32, i32),
         apple: (i32, i32),
         body:&LinkedList<(i32, i32)>,
-        grid_size: i32,
     ) -> Vec<f32> {
         let mut inputs = vec![0.0; 12];
-        let max_coord = (grid_size - 1) as f32;
+        let max_coord = (GRID_SIZE - 1) as f32;
         // Расстояние до стен (нормализованные от 0 до 1)
 
         inputs[0] = head.1 as f32 / max_coord; // До верха
@@ -82,14 +82,14 @@ impl Brain {
         inputs[5] = 1.0 - inputs[4];
         inputs[6] = if apple.0 < head.0 { 1.0 } else { 0.0 };
         inputs[7] = 1.0 - inputs[6];
-        inputs[8] = if Self::is_unsafe((head.0, head.1 - 1), body, grid_size) { 1.0 } else { 0.0 };
-        inputs[9] = if Self::is_unsafe((head.0, head.1 + 1), body, grid_size) { 1.0 } else { 0.0 };
-        inputs[10] = if Self::is_unsafe((head.0 - 1, head.1), body, grid_size) { 1.0 } else { 0.0 };
-        inputs[11] = if Self::is_unsafe((head.0 + 1, head.1), body, grid_size) { 1.0 } else { 0.0 };
+        inputs[8] = if Self::is_unsafe((head.0, head.1 - 1), body) { 1.0 } else { 0.0 };
+        inputs[9] = if Self::is_unsafe((head.0, head.1 + 1), body) { 1.0 } else { 0.0 };
+        inputs[10] = if Self::is_unsafe((head.0 - 1, head.1), body) { 1.0 } else { 0.0 };
+        inputs[11] = if Self::is_unsafe((head.0 + 1, head.1), body) { 1.0 } else { 0.0 };
         inputs
     }
-    fn is_unsafe(pos:(i32, i32), body:&LinkedList<(i32, i32)>, grid_size:i32)->bool{
-        if pos.0<0|| pos.0>=grid_size||pos.1<0||pos.1>=grid_size{
+    fn is_unsafe(pos:(i32, i32), body:&LinkedList<(i32, i32)>)->bool{
+        if pos.0<0|| pos.0>=GRID_SIZE||pos.1<0||pos.1>=GRID_SIZE{
             return true;
         }
         body.iter().any(|&p| p == pos)

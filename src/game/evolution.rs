@@ -1,6 +1,6 @@
 use rand::Rng;
 use crate::game::ai::Brain;
-
+use crate::config::*;
 pub struct Evolution {
     pub current_generation: Vec<Brain>,
     pub generation_number: u32,
@@ -12,7 +12,7 @@ impl Evolution {
         let mut brains = Vec::new();
         for _ in 0..size {
             //12 входов, 16 скрытых, 4 выхода
-            brains.push(Brain::new(12, 32, 16, 4));
+            brains.push(Brain::new(INPUTS, H1, H2, OUTPUT));
         }
         Evolution {
             current_generation: brains,
@@ -41,7 +41,7 @@ impl Evolution {
             let mut child = self.current_generation[parent_idx].clone();
 
             //Мутируем её гены
-            child.mutate(0.1); //шанс мутации каждого веса 10%
+            child.mutate(MUTATION_RATE); //шанс мутации каждого веса 10%
             next_gen.push(child)
         }
         self.current_generation = next_gen;

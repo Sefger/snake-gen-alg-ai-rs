@@ -2,8 +2,10 @@ use std::collections::LinkedList;
 use piston::input::*;
 
 use opengl_graphics::{GlGraphics};
+use crate::config::COLOR_BLACK;
 use crate::game::{Direction, Snake};
 use crate::game::Apple;
+use crate::traits::Drawable;
 
 pub struct Game {
     pub gl: GlGraphics,
@@ -15,10 +17,10 @@ pub struct Game {
 impl Game {
     pub fn render(&mut self, arg: &RenderArgs) {
         use graphics;
-        let black: [f32; 4] = [0.0, 0.0, 0.0, 1.0];
+
 
         self.gl.draw(arg.viewport(), |_c, gl| {
-            graphics::clear(black, gl);
+            graphics::clear(COLOR_BLACK, gl);
         });
         self.snake.render(&mut self.gl, arg);
 
@@ -105,8 +107,8 @@ impl Game {
             head,
             (self.apple.pos_x, self.apple.pos_y),
             &self.snake.body,
-            20
-        ); // Да размер указан руками...
+
+        );
 
         // 2. ИИ принимает решение
         let suggested_dir = self.snake.brain.decide(&inputs);
