@@ -1,7 +1,10 @@
 use std::collections::LinkedList;
+use glutin_window::OpenGL;
 use piston::input::*;
 
 use opengl_graphics::{GlGraphics};
+use rand::Rng;
+use crate::ai::Brain;
 use crate::config::COLOR_BLACK;
 use crate::game::{Direction, Snake};
 use crate::game::Apple;
@@ -103,7 +106,7 @@ impl Game {
 
         // 1. Изучаем мир
         let head = *self.snake.body.front().unwrap();
-        let inputs = crate::game::ai::Brain::get_inputs(
+        let inputs = Brain::get_inputs(
             head,
             (self.apple.pos_x, self.apple.pos_y),
             &self.snake.body,
@@ -136,10 +139,62 @@ impl Game {
             self.apple.update_chord(&self.snake.body);
         }
 
-        if self.snake.lifetime > (self.snake.score as u32 + 1) * 150 {
+        if self.snake.lifetime > (self.snake.score as u32 + 1) * 100 {
             self.is_game_over = true;
         }
 
 
+    }
+}
+impl Game {
+    pub fn create_game(opengl: OpenGL, brain: Brain) -> Game {
+        let mut rng = rand::rng();
+
+        let head_x = rng.random_range(5..15);
+        let head_y = rng.random_range(5..15);
+        let random_dir = match rng.random_range(0..4) {
+            0 => Direction::Up,
+            1 => Direction::Down,
+            2 => Direction::Left,
+            _ => Direction::Right,
+        };
+
+        let mut body = LinkedList::new();
+        body.push_back((head_x, head_y));
+        match random_dir {
+            Direction::Up => {
+                body.push_back((head_x, head_y + 1));
+                body.push_back((head_x, head_y + 2));
+            }
+            Direction::Down => {
+                body.push_back((head_x, head_y - 1));
+                body.push_back((head_x, head_y - 2));
+            }
+            Direction::Left => {
+                body.push_back((head_x + 1, head_y));
+                body.push_back((head_x + 2, head_y));
+            }
+            Direction::Right => {
+                body.push_back((head_x - 1, head_y));
+                body.push_back((head_x - 2, head_y));
+            }
+        }
+
+        let mut apple = Apple { pos_x: 0, pos_y: 0 };
+        apple.update_chord(&body);
+
+        Game {
+            gl: GlGraphics::new(opengl),
+            snake: Snake {
+                body,
+                dir: random_dir,
+                score: 0,
+                lifetime: 0,
+                dir_locked: false,
+                brain,
+            },
+            apple,
+            is_game_over: false
+        }
     }
 }

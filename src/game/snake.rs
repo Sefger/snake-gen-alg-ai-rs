@@ -1,8 +1,9 @@
 use std::collections::LinkedList;
 use piston::input::*;
 use opengl_graphics::GlGraphics;
+use crate::ai::Brain;
 
-use crate::game::Brain;
+
 use crate::traits::Drawable;
 use crate::config::*;
 #[derive(Clone, PartialEq)]
