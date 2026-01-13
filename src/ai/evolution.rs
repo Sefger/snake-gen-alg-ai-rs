@@ -1,5 +1,5 @@
 use rand::Rng;
-use crate::game::ai::Brain;
+use crate::Brain;
 use crate::config::*;
 pub struct Evolution {
     pub current_generation: Vec<Brain>,
@@ -46,5 +46,17 @@ impl Evolution {
         }
         self.current_generation = next_gen;
         self.generation_number += 1;
+    }
+    pub fn calculate_fitness(score: i32, lifetime: u32) -> f32 {
+        // 1. Очки за выживание
+        let survival_bonus = lifetime as f32 * 0.01;
+
+        // 2. Большой бонус за яблоко
+        let apple_bonus = (score * score * 500) as f32;
+
+        // 3. Штраф за быструю смерть
+        let death_penalty = if score == 0 && lifetime < 20 { -100.0 } else { 0.0 };
+
+        survival_bonus + apple_bonus + death_penalty
     }
 }
