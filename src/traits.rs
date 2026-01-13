@@ -1,5 +1,5 @@
 use opengl_graphics::GlGraphics;
 use piston::input::RenderArgs;
 pub trait Drawable{
-    fn render(&self, gl: &GlGraphics, args: &RenderArgs);
+    fn render(&mut self, gl: &mut GlGraphics, args: &RenderArgs);
 }
