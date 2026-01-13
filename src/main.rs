@@ -11,24 +11,49 @@ use glutin_window::GlutinWindow;
 use opengl_graphics::{GlGraphics, OpenGL};
 use piston::OpenGLWindow;
 use std::collections::LinkedList;
+use rand::Rng;
 
 use crate::game::{Apple, Brain, Direction, Evolution, Game, Snake};
 use crate::config::*;
 // Для создания игры
 fn create_game(opengl: OpenGL, brain: Brain) -> Game {
-    Game {
-        gl: GlGraphics::new(opengl),
-        snake: Snake {
-            // Начальная позиция подальше от стен
-            body: LinkedList::from_iter(vec![(5, 5), (4, 5), (3, 5)]),
-            dir: Direction::Right,
-            score: 0,
-            lifetime: 0,
+    let mut rng = rand::rng();
+
+    let head_x = rng.random_range(5..15);
+    let head_y = rng.random_range(5..15);
+    let random_dir = match rng.random_range(0..4){
+        0=>Direction::Up,
+        1=>Direction::Down,
+        2=>Direction::Left,
+        _=>Direction::Right,
+    };
+
+    let mut body = LinkedList::new();
+    body.push_back((head_x, head_y));
+    let mut body = LinkedList::new();
+    match random_dir {
+        Direction::Up =>{body.push_back((head_x, head_y+1)); body.push_back((head_x, head_y+2));}
+        Direction::Down  => { body.push_back((head_x, head_y - 1)); body.push_back((head_x, head_y - 2)); }
+        Direction::Left  => { body.push_back((head_x + 1, head_y)); body.push_back((head_x + 2, head_y)); }
+        Direction::Right => { body.push_back((head_x - 1, head_y)); body.push_back((head_x - 2, head_y)); }
+    }
+
+    let mut apple = Apple{pos_x:0, pos_y:0};
+    apple.update_chord(&body);
+
+    Game{
+        gl:GlGraphics::new(opengl),
+        snake:Snake{
+            body,
+            dir:random_dir,
+            score:0,
+            lifetime:0,
             dir_locked: false,
             brain,
         },
-        apple: Apple { pos_x: 10, pos_y: 10 },
-        is_game_over: false,
+        apple,
+        is_game_over:false
+
     }
 }
 

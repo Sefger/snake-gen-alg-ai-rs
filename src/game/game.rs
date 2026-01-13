@@ -26,7 +26,7 @@ impl Game {
 
         self.apple.render(&mut self.gl, arg);
     }
-
+    #[allow(dead_code)]
     pub fn update(&mut self, apple_pos: (i32, i32)) {
         if self.check_collision() {
             self.is_game_over = true;
