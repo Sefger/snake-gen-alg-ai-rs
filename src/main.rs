@@ -1,6 +1,7 @@
 mod game;
+mod traits;
+mod config;
 
-use crate::game::{Game, Snake, Apple, Direction, Evolution, Brain};
 
 use piston::window::WindowSettings;
 use piston::event_loop::*;
@@ -11,7 +12,8 @@ use opengl_graphics::{GlGraphics, OpenGL};
 use piston::OpenGLWindow;
 use std::collections::LinkedList;
 
-
+use crate::game::{Apple, Brain, Direction, Evolution, Game, Snake};
+use crate::config::*;
 // Для создания игры
 fn create_game(opengl: OpenGL, brain: Brain) -> Game {
     Game {
@@ -35,7 +37,7 @@ fn main() {
 
     let mut window: GlutinWindow = WindowSettings::new(
         "Snake AI Training",
-        [1200, 400],
+        [WINDOW_WIDTH, WINDOW_HEIGHT],
     )
         .graphics_api(opengl)
         .exit_on_esc(true)
@@ -44,21 +46,21 @@ fn main() {
         .unwrap();
 
     gl::load_with(|symbol| window.get_proc_address(symbol) as *const _);
-    let mut evolution = Evolution::new(350);
+    let mut evolution = Evolution::new(POPULATION_SIZE);
     let mut current_agent_idx = 0;
     let mut scores = Vec::new();
     let mut game = create_game(opengl, evolution.current_generation[0].clone());
 
     let mut best_brain_of_prev_gen:Option<Brain> = None;
 
-    let mut events = Events::new(EventSettings::new()).ups(200);
+    let mut events = Events::new(EventSettings::new()).ups(UPS);
     while let Some(e) = events.next(&mut window) {
         if let Some(r) = e.render_args() {
             game.render(&r);
             if let Some(ref best_brain) = best_brain_of_prev_gen {
                 let head = *game.snake.body.front().unwrap();
-                let inputs = Brain::get_inputs(head, (game.apple.pos_x, game.apple.pos_y), &game.snake.body, 20);
-                best_brain.render_vis(&mut game.gl, &r, &inputs, 400.0);
+                let inputs = Brain::get_inputs(head, (game.apple.pos_x, game.apple.pos_y), &game.snake.body);
+                best_brain.render_vis(&mut game.gl, &r, &inputs, (WINDOW_WIDTH/3).into());
             }
         }
         if let Some(_) = e.update_args() {
