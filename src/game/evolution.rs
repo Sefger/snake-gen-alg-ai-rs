@@ -30,18 +30,18 @@ impl Evolution {
         let mut next_gen = Vec::new();
 
         // 1. "Элитизм" Копируем 2 лучших без изменений
-        for i in 0..2 {
+        for i in 0..15 {
             next_gen.push(self.current_generation[scores[i].0].clone());
         }
 
         // 2. Заполняем остальную популяцию потомками лучших
         while next_gen.len() < self.population_size {
             // Берём случайную из пяти лучших
-            let parent_idx = scores[rand::rng().random_range(0..5)].0;
+            let parent_idx = scores[rand::rng().random_range(0..30)].0;
             let mut child = self.current_generation[parent_idx].clone();
 
             //Мутируем её гены
-            child.mutate(MUTATION_RATE); //шанс мутации каждого веса 10%
+            child.mutate(MUTATION_RATE);
             next_gen.push(child)
         }
         self.current_generation = next_gen;
