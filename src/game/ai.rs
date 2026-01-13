@@ -128,31 +128,34 @@ impl Brain {
         gl: &mut GlGraphics,
         args: &RenderArgs,
         inputs: &[f32],
-        offset_x: f64, // Добавлен четвертый аргумент
+        offset_x: f64,
     ) {
-
         use graphics::*;
 
-        let start_x = offset_x + 50.0; // Используем offset_x для смещения
+        let start_x = offset_x + 80.0; // Смещаем чуть правее для красоты
+        let layer_gap = 130.0;
+        let node_gap = 11.0;   // Расстояние между узлами
+        let layers = [INPUTS, H1, H2, OUTPUT];
 
-        let layer_gap = 150.0;
-        let node_gap = 12.0;
-        let layers = [INPUTS, H1,H2, OUTPUT];
-        let max_layer_height = layers.iter().max().unwrap_or(&0);
-        let total_max_height = (*max_layer_height as f64)*node_gap;
+        // Находим высоту самого высокого слоя (это H1 = 32), чтобы центрировать остальные
+        let max_layer_height = *layers.iter().max().unwrap_or(&0) as f64 * node_gap;
 
-        // 1. Считаем активации
+        // 1. Считаем активации (для подсветки узлов)
         let h1 = self.calculate_layer(inputs, &self.weight_ih);
         let h2 = self.calculate_layer(&h1, &self.weight_hh);
         let out = self.calculate_layer(&h2, &self.weight_ho);
         let acts = [inputs.to_vec(), h1, h2, out];
 
-        // 2. Координаты узлов
+        // 2. Координаты узлов с ВЕРТИКАЛЬНЫМ ЦЕНТРИРОВАНИЕМ
         let mut positions = Vec::new();
         for (l_idx, &size) in layers.iter().enumerate() {
             let mut layer_pos = Vec::new();
-            let layer_height = (size as f64)*node_gap;
-            let v_offset = (total_max_height - layer_height)/2.0+10.0;
+
+            // Считаем высоту текущего слоя
+            let current_layer_height = (size as f64) * node_gap;
+            // Смещение = (Макс_высота - Моя_высота) / 2
+            let v_offset = (max_layer_height - current_layer_height) / 2.0 + 30.0;
+
             for i in 0..size {
                 layer_pos.push([
                     start_x + l_idx as f64 * layer_gap,
@@ -163,7 +166,7 @@ impl Brain {
         }
 
         gl.draw(args.viewport(), |c, gl| {
-            // 3. Рисуем связи
+            // 3. Рисуем связи (теперь с динамической толщиной)
             self.draw_layer_links(gl, &c, &positions[0], &positions[1], &self.weight_ih);
             self.draw_layer_links(gl, &c, &positions[1], &positions[2], &self.weight_hh);
             self.draw_layer_links(gl, &c, &positions[2], &positions[3], &self.weight_ho);
@@ -172,9 +175,15 @@ impl Brain {
             for (l, layer) in positions.iter().enumerate() {
                 for (n, pos) in layer.iter().enumerate() {
                     let a = acts[l][n];
-                    let intensity = 0.3 + (a.abs() * 0.7) as f32;
-                    let color = if a > 0.0 { [0.0, intensity, 0.5, 1.0] } else { [intensity, 0.0, 0.2, 1.0] };
-                    ellipse(color, ellipse::circle(pos[0], pos[1], 4.0), c.transform, gl);
+                    // Яркость зависит от силы сигнала (активации)
+                    let intensity = 0.4 + (a.abs() * 0.6) as f32;
+                    let color = if a > 0.0 {
+                        [0.0, intensity, 0.4, 1.0] // Зеленый (активен)
+                    } else {
+                        [intensity, 0.1, 0.1, 1.0] // Красный (торможение)
+                    };
+
+                    ellipse(color, ellipse::circle(pos[0], pos[1], 3.5), c.transform, gl);
                 }
             }
         });
@@ -193,27 +202,28 @@ impl Brain {
 
     fn draw_layer_links(
         &self,
-        gl:&mut opengl_graphics::GlGraphics,
-        c:&graphics::Context,
-        p1: &[[f64;2]],
-        p2: &[[f64;2]],
-        weights:&Vec<Vec<f32>>
-    ){
+        gl: &mut GlGraphics,
+        c: &graphics::Context,
+        p1: &[[f64; 2]],
+        p2: &[[f64; 2]],
+        weights: &Vec<Vec<f32>>
+    ) {
         use graphics::*;
-        for (j, end) in p2.iter().enumerate(){
-            for (i, start) in p1.iter().enumerate(){
+        for (j, end) in p2.iter().enumerate() {
+            for (i, start) in p1.iter().enumerate() {
                 let w = weights[j][i];
-                if w.abs()<0.1{
-                    continue
-                }
-                let alpha = (w.abs()*0.2) as f32;
-                let color = if w>0.0{
-                    [0.2, 0.2, 1.0, alpha]
-                }else{
-                    [1.0, 0.2, 0.2, alpha]
+                if w.abs() < 0.15 { continue; } // Игнорируем совсем слабые связи
+
+                let alpha = (w.abs() * 0.3).min(0.5) as f32;
+                let thickness = (w.abs() * 1.2) as f64; // Важные связи толще
+
+                let color = if w > 0.0 {
+                    [0.2, 0.4, 1.0, alpha] // Синий для положительных
+                } else {
+                    [1.0, 0.2, 0.2, alpha] // Красный для отрицательных
                 };
 
-                line(color, 0.5, [start[0], start[1], end[0], end[1]], c.transform, gl)
+                line(color, thickness, [start[0], start[1], end[0], end[1]], c.transform, gl);
             }
         }
     }
