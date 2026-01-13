@@ -30,7 +30,6 @@ fn create_game(opengl: OpenGL, brain: Brain) -> Game {
 
     let mut body = LinkedList::new();
     body.push_back((head_x, head_y));
-    let mut body = LinkedList::new();
     match random_dir {
         Direction::Up =>{body.push_back((head_x, head_y+1)); body.push_back((head_x, head_y+2));}
         Direction::Down  => { body.push_back((head_x, head_y - 1)); body.push_back((head_x, head_y - 2)); }
